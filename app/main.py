@@ -13,9 +13,9 @@ from starlette.responses import Response
 from app.agent import generate_patch
 from app.auth import verify_keycloak_identity
 from app.config import settings
-from app.github_client import commit_patch_and_open_pr
+from app.github_client import commit_patches_and_open_pr
 from app.guards import verify_patch
-from app.sandbox import run_in_sandbox
+from app.sandbox import run_files_in_sandbox
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("patchforge")
@@ -86,8 +86,9 @@ async def webhook_endpoint(request: Request) -> PipelineResult:
     if not target_path.exists():
         raise HTTPException(status_code=500, detail=f"missing target file: {target_path}")
 
-    faulty_code = target_path.read_text(encoding="utf-8")
+    faulty_code = _read_target_context()
     patch = None
+    patched_files: dict[str, str] = {}
     feedback = ""
     last_failure = "patch generation failed"
 
@@ -98,15 +99,16 @@ async def webhook_endpoint(request: Request) -> PipelineResult:
             last_failure = "patch generation failed"
             break
 
-        guard = verify_patch(patch.patched_code)
-        if not guard.ok:
+        patched_files = patch.file_map(settings.TARGET_FILE_PATH)
+        guard_errors = _verify_patched_files(patched_files)
+        if guard_errors:
             PIPELINE_EVENTS.labels("guard", "blocked").inc()
-            last_failure = "; ".join(guard.errors)
+            last_failure = "; ".join(guard_errors)
             feedback = f"Attempt {attempt} failed AST guard: {last_failure}"
             patch = None
             continue
 
-        sandbox_result = await asyncio.to_thread(run_in_sandbox, patch.patched_code, str(target_path))
+        sandbox_result = await asyncio.to_thread(run_files_in_sandbox, patched_files, str(target_path))
         if not sandbox_result["success"]:
             PIPELINE_EVENTS.labels("sandbox", "failed").inc()
             last_failure = sandbox_result["logs"]
@@ -120,12 +122,11 @@ async def webhook_endpoint(request: Request) -> PipelineResult:
         return PipelineResult(status="failed", detail=last_failure)
 
     branch = f"patchforge/fix-issue-{issue_number}"
-    pr_result = await commit_patch_and_open_pr(
+    pr_result = await commit_patches_and_open_pr(
         branch_name=branch,
-        file_content=patch.patched_code,
+        patched_files=patched_files,
         pr_title=issue_title,
         summary=patch.explanation,
-        target_file_path=str(target_path).replace("\\", "/"),
     )
     if not pr_result.ok:
         PIPELINE_EVENTS.labels("github", "verified_no_pr").inc()
@@ -133,6 +134,33 @@ async def webhook_endpoint(request: Request) -> PipelineResult:
 
     PIPELINE_EVENTS.labels("github", "resolved").inc()
     return PipelineResult(status="resolved", branch=branch, pr_url=pr_result.url)
+
+
+def _read_target_context() -> str:
+    chunks = []
+    for path in _target_file_paths():
+        file_path = Path(path)
+        if file_path.exists():
+            chunks.append(f"File: {path}\n{file_path.read_text(encoding='utf-8')}")
+    return "\n\n".join(chunks)
+
+
+def _target_file_paths() -> list[str]:
+    if not settings.TARGET_FILE_PATHS:
+        return [settings.TARGET_FILE_PATH]
+    paths = [path.strip() for path in settings.TARGET_FILE_PATHS.split(",") if path.strip()]
+    return paths or [settings.TARGET_FILE_PATH]
+
+
+def _verify_patched_files(patched_files: dict[str, str]) -> list[str]:
+    errors = []
+    for path, content in patched_files.items():
+        if not path.endswith(".py"):
+            continue
+        guard = verify_patch(content)
+        if not guard.ok:
+            errors.extend(f"{path}: {error}" for error in guard.errors)
+    return errors
 
 
 def _verify_signature(body: bytes, signature: str | None) -> None:

@@ -46,6 +46,24 @@ DEMO_PATCH_FALLBACK=false
 
 Leave `AI_BASE_URL` empty for OpenAI.
 
+## Patch Scope
+
+Single-file default:
+
+```env
+TARGET_FILE_PATH="tests/test_target.py"
+TARGET_FILE_PATHS=""
+```
+
+Multi-file context:
+
+```env
+TARGET_FILE_PATH="tests/test_target.py"
+TARGET_FILE_PATHS="tests/test_target.py,app/helpers.py"
+```
+
+The AI can return multiple patched files. PatchForge validates every Python file, runs sandbox tests, then commits all returned files to the PR.
+
 ## Grafana / Prometheus
 
 Run:

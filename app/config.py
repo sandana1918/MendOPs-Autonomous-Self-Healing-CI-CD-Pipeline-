@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     DEMO_PATCH_FALLBACK: bool = False
     REPOSITORY_NAME: str = "owner/repo"
     TARGET_FILE_PATH: str = "tests/test_target.py"
+    TARGET_FILE_PATHS: str = ""
     SANDBOX_DIR: str = "sandbox_temp"
     SANDBOX_IMAGE: str = "sandbox-tester:latest"
     SANDBOX_MEMORY_LIMIT: str = "256m"

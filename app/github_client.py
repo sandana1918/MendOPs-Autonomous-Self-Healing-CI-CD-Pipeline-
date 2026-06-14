@@ -23,6 +23,21 @@ async def commit_patch_and_open_pr(
     summary: str,
     target_file_path: str | None = None,
 ) -> PullRequestResult:
+    path = target_file_path or settings.TARGET_FILE_PATH
+    return await commit_patches_and_open_pr(
+        branch_name=branch_name,
+        patched_files={path: file_content},
+        pr_title=pr_title,
+        summary=summary,
+    )
+
+
+async def commit_patches_and_open_pr(
+    branch_name: str,
+    patched_files: dict[str, str],
+    pr_title: str,
+    summary: str,
+) -> PullRequestResult:
     if not settings.GITHUB_TOKEN:
         return PullRequestResult(False, error="GITHUB_TOKEN missing")
 
@@ -32,14 +47,15 @@ async def commit_patch_and_open_pr(
         "X-GitHub-Api-Version": "2022-11-28",
     }
     repo_url = f"{settings.GITHUB_API_URL.rstrip('/')}/repos/{settings.REPOSITORY_NAME}"
-    path = target_file_path or settings.TARGET_FILE_PATH
 
     async with httpx.AsyncClient(timeout=30) as client:
         try:
             base_sha = await _get_base_sha(client, repo_url, headers)
             await _create_branch(client, repo_url, headers, branch_name, base_sha)
-            file_sha = await _get_file_sha(client, repo_url, headers, path)
-            await _put_file(client, repo_url, headers, branch_name, path, file_content, file_sha, pr_title)
+            for path, file_content in patched_files.items():
+                normalized_path = path.replace("\\", "/")
+                file_sha = await _get_file_sha(client, repo_url, headers, normalized_path)
+                await _put_file(client, repo_url, headers, branch_name, normalized_path, file_content, file_sha, pr_title)
             pr_url = await _open_pr(client, repo_url, headers, branch_name, pr_title, summary)
             return PullRequestResult(True, url=pr_url)
         except Exception as exc:
@@ -131,4 +147,3 @@ async def _open_pr(
     )
     response.raise_for_status()
     return response.json().get("html_url", "")
-

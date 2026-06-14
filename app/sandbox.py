@@ -12,6 +12,10 @@ ASSERTION_MARKER = "# --- Automated Test Assertion Layer ---"
 
 
 def run_in_sandbox(patched_code: str, test_file_path: str | None = None) -> dict[str, Any]:
+    return run_files_in_sandbox({settings.TARGET_FILE_PATH: patched_code}, test_file_path)
+
+
+def run_files_in_sandbox(patched_files: dict[str, str], test_file_path: str | None = None) -> dict[str, Any]:
     test_path = Path(test_file_path or settings.TARGET_FILE_PATH)
     if not test_path.exists():
         return {"success": False, "logs": f"missing test file: {test_path}"}
@@ -26,11 +30,30 @@ def run_in_sandbox(patched_code: str, test_file_path: str | None = None) -> dict
 
     try:
         assertions = _extract_assertions(test_path.read_text(encoding="utf-8"))
-        target = scratchpad / "test_target.py"
-        target.write_text(
-            f"{patched_code.rstrip()}\n\n{ASSERTION_MARKER}\n{assertions.lstrip()}",
-            encoding="utf-8",
-        )
+        target_key = str(test_path).replace("\\", "/")
+        wrote_test_target = False
+
+        for path, content in patched_files.items():
+            normalized_path = path.replace("\\", "/")
+            if normalized_path == target_key or Path(normalized_path).name == test_path.name:
+                target = scratchpad / "test_target.py"
+                target.write_text(
+                    f"{content.rstrip()}\n\n{ASSERTION_MARKER}\n{assertions.lstrip()}",
+                    encoding="utf-8",
+                )
+                wrote_test_target = True
+                continue
+
+            output_path = (scratchpad / normalized_path).resolve()
+            try:
+                output_path.relative_to(scratchpad)
+            except ValueError:
+                return {"success": False, "logs": f"unsafe sandbox path: {path}"}
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(content, encoding="utf-8")
+
+        if not wrote_test_target:
+            return {"success": False, "logs": f"patch missing test target: {target_key}"}
 
         logs = docker_client.containers.run(
             image=settings.SANDBOX_IMAGE,
@@ -61,4 +84,3 @@ def _extract_assertions(content: str) -> str:
     if ASSERTION_MARKER not in content:
         return content
     return content.split(ASSERTION_MARKER, 1)[1]
-

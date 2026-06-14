@@ -56,6 +56,8 @@ DEMO_PATCH_FALLBACK=false
 GITHUB_WEBHOOK_SECRET="random-secret"
 GITHUB_TOKEN="github_pat_..."
 REPOSITORY_NAME="sandana1918/PatchForgeAI"
+TARGET_FILE_PATH="tests/test_target.py"
+TARGET_FILE_PATHS=""
 KEYCLOAK_ENABLED=false
 ```
 
@@ -185,4 +187,3 @@ sudo systemctl restart patchforge
 sudo journalctl -u patchforge -f
 sudo docker compose -f /opt/patchforge/docker-compose.monitoring.yml ps
 ```
-

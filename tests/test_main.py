@@ -48,12 +48,12 @@ def test_webhook_retries_guard_failure_then_opens_pr(monkeypatch):
             ),
         )
 
-    async def fake_commit_patch_and_open_pr(**kwargs):
+    async def fake_commit_patches_and_open_pr(**kwargs):
         return PullRequestResult(True, url="https://example.test/pr/1")
 
     monkeypatch.setattr(main_module, "generate_patch", fake_generate_patch)
-    monkeypatch.setattr(main_module, "run_in_sandbox", lambda code, path: {"success": True, "logs": "ok"})
-    monkeypatch.setattr(main_module, "commit_patch_and_open_pr", fake_commit_patch_and_open_pr)
+    monkeypatch.setattr(main_module, "run_files_in_sandbox", lambda files, path: {"success": True, "logs": "ok"})
+    monkeypatch.setattr(main_module, "commit_patches_and_open_pr", fake_commit_patches_and_open_pr)
 
     body = json.dumps(
         {
@@ -84,6 +84,62 @@ def test_webhook_retries_guard_failure_then_opens_pr(monkeypatch):
     }
     assert len(calls) == 2
     assert calls[1].startswith("Attempt 1 failed AST guard")
+
+
+def test_webhook_accepts_multi_file_patch(monkeypatch):
+    committed = {}
+
+    async def fake_generate_patch(issue_title, issue_body, faulty_code, feedback=""):
+        return PatchResponse(
+            explanation="fixed",
+            files=[
+                {
+                    "path": "app/helpers.py",
+                    "content": "def fallback_average(ratings_list):\n    return 0.0 if not ratings_list else sum(ratings_list) / len(ratings_list)\n",
+                },
+                {
+                    "path": "tests/test_target.py",
+                    "content": (
+                        "def calculate_average_rating(ratings_list):\n"
+                        "    if not ratings_list:\n"
+                        "        return 0.0\n"
+                        "    return sum(ratings_list) / len(ratings_list)\n"
+                    ),
+                },
+            ],
+        )
+
+    async def fake_commit_patches_and_open_pr(**kwargs):
+        committed.update(kwargs["patched_files"])
+        return PullRequestResult(True, url="https://example.test/pr/2")
+
+    monkeypatch.setattr(main_module, "generate_patch", fake_generate_patch)
+    monkeypatch.setattr(main_module, "run_files_in_sandbox", lambda files, path: {"success": True, "logs": "ok"})
+    monkeypatch.setattr(main_module, "commit_patches_and_open_pr", fake_commit_patches_and_open_pr)
+
+    body = json.dumps(
+        {
+            "action": "opened",
+            "issue": {
+                "number": 43,
+                "title": "Multi-file fix",
+                "body": "Move helper and patch target",
+            },
+        },
+        separators=(",", ":"),
+    )
+    response = client.post(
+        "/webhook",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _signature(body.encode("utf-8")),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["pr_url"] == "https://example.test/pr/2"
+    assert set(committed) == {"app/helpers.py", "tests/test_target.py"}
 
 
 def _signature(body: bytes) -> str:
