@@ -28,11 +28,15 @@ async def generate_patch(
     issue_body: str,
     faulty_code: str,
 ) -> Optional[PatchResponse]:
-    if not settings.OPENAI_API_KEY:
-        logger.error("OPENAI_API_KEY missing")
+    api_key = settings.AI_API_KEY or settings.OPENAI_API_KEY
+    if not api_key:
+        logger.error("AI_API_KEY or OPENAI_API_KEY missing")
         return None
 
-    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    client_kwargs = {"api_key": api_key}
+    if settings.AI_BASE_URL:
+        client_kwargs["base_url"] = settings.AI_BASE_URL
+    client = AsyncOpenAI(**client_kwargs)
     prompt = (
         f"Issue title:\n{issue_title}\n\n"
         f"Issue body:\n{issue_body}\n\n"

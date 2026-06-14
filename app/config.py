@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    AI_API_KEY: str = ""
+    AI_BASE_URL: str = ""
     OPENAI_API_KEY: str = ""
     GITHUB_WEBHOOK_SECRET: str = "supersecret"
     GITHUB_TOKEN: str = ""

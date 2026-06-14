@@ -33,6 +33,19 @@ If OpenAI quota is unavailable, keep the pipeline demo running with:
 DEMO_PATCH_FALLBACK=true
 ```
 
+## Alternate AI Provider
+
+Use any OpenAI-compatible chat API:
+
+```env
+AI_API_KEY="provider_key"
+AI_BASE_URL="https://provider.example/v1"
+MODEL_NAME="provider-model"
+DEMO_PATCH_FALLBACK=false
+```
+
+Leave `AI_BASE_URL` empty for OpenAI.
+
 ## Grafana / Prometheus
 
 Run:
