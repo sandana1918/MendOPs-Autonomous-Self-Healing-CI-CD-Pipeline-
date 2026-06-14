@@ -1,0 +1,55 @@
+import logging
+from typing import Optional
+
+from openai import AsyncOpenAI
+from pydantic import BaseModel, Field
+
+from app.config import settings
+
+logger = logging.getLogger("patchforge.agent")
+
+
+class PatchResponse(BaseModel):
+    explanation: str = Field(min_length=1)
+    patched_code: str = Field(min_length=1)
+
+
+SYSTEM_PROMPT = """
+You are PatchForge AI. Return only valid structured data.
+Patch only the production code block. Do not include markdown fences.
+Keep the existing public API intact. Do not import network, filesystem,
+process, reflection, or environment-access modules.
+"""
+
+
+async def generate_patch(
+    issue_title: str,
+    issue_body: str,
+    faulty_code: str,
+) -> Optional[PatchResponse]:
+    if not settings.OPENAI_API_KEY:
+        logger.error("OPENAI_API_KEY missing")
+        return None
+
+    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = (
+        f"Issue title:\n{issue_title}\n\n"
+        f"Issue body:\n{issue_body}\n\n"
+        f"Current code and tests:\n{faulty_code}\n"
+    )
+
+    try:
+        response = await client.beta.chat.completions.parse(
+            model=settings.MODEL_NAME,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            response_format=PatchResponse,
+            temperature=settings.LLM_TEMPERATURE,
+        )
+        return response.choices[0].message.parsed
+    except Exception:
+        logger.exception("OpenAI patch generation failed")
+        return None
+
