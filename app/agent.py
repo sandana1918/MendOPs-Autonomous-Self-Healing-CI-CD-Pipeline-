@@ -16,6 +16,7 @@ class PatchResponse(BaseModel):
 
 SYSTEM_PROMPT = """
 You are PatchForge AI. Return only valid structured data.
+Return a JSON object with exactly: explanation, patched_code.
 Patch only the production code block. Do not include markdown fences.
 Keep the existing public API intact. Do not import network, filesystem,
 process, reflection, or environment-access modules.
@@ -39,17 +40,35 @@ async def generate_patch(
     )
 
     try:
-        response = await client.beta.chat.completions.parse(
+        response = await client.chat.completions.create(
             model=settings.MODEL_NAME,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            response_format=PatchResponse,
+            response_format={"type": "json_object"},
             temperature=settings.LLM_TEMPERATURE,
         )
-        return response.choices[0].message.parsed
+        content = response.choices[0].message.content or "{}"
+        return PatchResponse.model_validate_json(content)
     except Exception:
         logger.exception("OpenAI patch generation failed")
+        if settings.DEMO_PATCH_FALLBACK:
+            return _demo_patch(faulty_code)
         return None
 
+
+def _demo_patch(faulty_code: str) -> Optional[PatchResponse]:
+    if "calculate_average_rating" not in faulty_code:
+        return None
+
+    return PatchResponse(
+        explanation="Offline demo fallback: handle an empty ratings list by returning 0.0 before dividing.",
+        patched_code=(
+            "def calculate_average_rating(ratings_list):\n"
+            "    \"\"\"Calculates user ratings with an empty-list fallback.\"\"\"\n"
+            "    if not ratings_list:\n"
+            "        return 0.0\n"
+            "    return sum(ratings_list) / len(ratings_list)\n"
+        ),
+    )

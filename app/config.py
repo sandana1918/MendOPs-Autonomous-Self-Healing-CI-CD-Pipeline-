@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     GITHUB_DEFAULT_BRANCH: str = "main"
     MODEL_NAME: str = "gpt-4o"
     LLM_TEMPERATURE: float = 0.0
+    DEMO_PATCH_FALLBACK: bool = False
     REPOSITORY_NAME: str = "owner/repo"
     TARGET_FILE_PATH: str = "tests/test_target.py"
     SANDBOX_DIR: str = "sandbox_temp"

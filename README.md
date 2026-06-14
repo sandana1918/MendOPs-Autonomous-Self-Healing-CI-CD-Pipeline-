@@ -25,6 +25,14 @@ KEYCLOAK_AUDIENCE="patchforge-api"
 KEYCLOAK_REQUIRED_ROLE="patchforge-ci"
 ```
 
+## Offline Demo
+
+If OpenAI quota is unavailable, keep the pipeline demo running with:
+
+```env
+DEMO_PATCH_FALLBACK=true
+```
+
 ## Grafana / Prometheus
 
 Run:
