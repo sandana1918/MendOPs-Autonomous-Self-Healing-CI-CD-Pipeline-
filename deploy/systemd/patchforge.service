@@ -1,0 +1,18 @@
+[Unit]
+Description=PatchForge AI API
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=patchforge
+Group=patchforge
+WorkingDirectory=/opt/patchforge
+EnvironmentFile=/opt/patchforge/.env
+ExecStart=/opt/patchforge/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

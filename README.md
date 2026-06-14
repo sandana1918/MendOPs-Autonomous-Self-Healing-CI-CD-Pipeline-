@@ -84,3 +84,9 @@ Invoke-RestMethod http://127.0.0.1:8000/webhook -Method Post -ContentType "appli
 ```powershell
 pytest tests/test_guards.py
 ```
+
+## Deploy
+
+Use a Linux VM/VPS because the secure patch sandbox needs Docker.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md).
