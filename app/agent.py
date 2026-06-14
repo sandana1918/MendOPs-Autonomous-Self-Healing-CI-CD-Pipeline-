@@ -27,6 +27,7 @@ async def generate_patch(
     issue_title: str,
     issue_body: str,
     faulty_code: str,
+    feedback: str = "",
 ) -> Optional[PatchResponse]:
     api_key = settings.AI_API_KEY or settings.OPENAI_API_KEY
     if not api_key:
@@ -40,7 +41,8 @@ async def generate_patch(
     prompt = (
         f"Issue title:\n{issue_title}\n\n"
         f"Issue body:\n{issue_body}\n\n"
-        f"Current code and tests:\n{faulty_code}\n"
+        f"Current code and tests:\n{faulty_code}\n\n"
+        f"Previous validation feedback:\n{feedback or 'none'}\n"
     )
 
     try:

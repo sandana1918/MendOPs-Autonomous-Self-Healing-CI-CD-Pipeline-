@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -86,20 +87,37 @@ async def webhook_endpoint(request: Request) -> PipelineResult:
         raise HTTPException(status_code=500, detail=f"missing target file: {target_path}")
 
     faulty_code = target_path.read_text(encoding="utf-8")
-    patch = await generate_patch(issue_title, issue_body, faulty_code)
+    patch = None
+    feedback = ""
+    last_failure = "patch generation failed"
+
+    for attempt in range(1, settings.MAX_PATCH_ATTEMPTS + 1):
+        patch = await generate_patch(issue_title, issue_body, faulty_code, feedback=feedback)
+        if not patch:
+            PIPELINE_EVENTS.labels("agent", "failed").inc()
+            last_failure = "patch generation failed"
+            break
+
+        guard = verify_patch(patch.patched_code)
+        if not guard.ok:
+            PIPELINE_EVENTS.labels("guard", "blocked").inc()
+            last_failure = "; ".join(guard.errors)
+            feedback = f"Attempt {attempt} failed AST guard: {last_failure}"
+            patch = None
+            continue
+
+        sandbox_result = await asyncio.to_thread(run_in_sandbox, patch.patched_code, str(target_path))
+        if not sandbox_result["success"]:
+            PIPELINE_EVENTS.labels("sandbox", "failed").inc()
+            last_failure = sandbox_result["logs"]
+            feedback = f"Attempt {attempt} failed pytest sandbox: {last_failure}"
+            patch = None
+            continue
+
+        break
+
     if not patch:
-        PIPELINE_EVENTS.labels("agent", "failed").inc()
-        return PipelineResult(status="failed", detail="patch generation failed")
-
-    guard = verify_patch(patch.patched_code)
-    if not guard.ok:
-        PIPELINE_EVENTS.labels("guard", "blocked").inc()
-        return PipelineResult(status="blocked", detail="; ".join(guard.errors))
-
-    sandbox_result = run_in_sandbox(patch.patched_code, str(target_path))
-    if not sandbox_result["success"]:
-        PIPELINE_EVENTS.labels("sandbox", "failed").inc()
-        return PipelineResult(status="failed", detail=sandbox_result["logs"])
+        return PipelineResult(status="failed", detail=last_failure)
 
     branch = f"patchforge/fix-issue-{issue_number}"
     pr_result = await commit_patch_and_open_pr(

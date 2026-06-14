@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     GITHUB_DEFAULT_BRANCH: str = "main"
     MODEL_NAME: str = "gpt-4o"
     LLM_TEMPERATURE: float = 0.0
+    MAX_PATCH_ATTEMPTS: int = Field(default=3, ge=1, le=5)
     DEMO_PATCH_FALLBACK: bool = False
     REPOSITORY_NAME: str = "owner/repo"
     TARGET_FILE_PATH: str = "tests/test_target.py"
