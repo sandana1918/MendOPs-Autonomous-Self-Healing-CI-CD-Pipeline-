@@ -1,4 +1,4 @@
-# PatchForge AI
+# MendOps
 
 Autonomous self-healing CI/CD pipeline and secure sandboxed bug reporter.
 
