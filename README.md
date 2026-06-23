@@ -97,10 +97,49 @@ $hash = ($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($body)) | ForEach-Obje
 Invoke-RestMethod http://127.0.0.1:8000/webhook -Method Post -ContentType "application/json" -Headers @{"X-Hub-Signature-256"="sha256=$hash"} -Body $body
 ```
 
+## Security Guard
+
+Every AI-generated patch is statically analyzed (AST) before it is allowed to
+run. The guard blocks:
+
+- dangerous imports (`os`, `subprocess`, `socket`, `requests`, `pickle`, `ctypes`, …)
+- dynamic execution and reflection builtins (`eval`, `exec`, `compile`, `__import__`,
+  `getattr`/`setattr`, `open`) whether called or merely aliased (`f = eval`)
+- attribute-based sandbox escapes (`__class__`, `__bases__`, `__subclasses__`,
+  `__globals__`, `__builtins__`, …)
+
+## Sandbox Backends
+
+`SANDBOX_BACKEND` selects how patches are test-verified:
+
+```env
+SANDBOX_BACKEND=auto   # docker when reachable, else local (default)
+SANDBOX_BACKEND=docker # hardened container: no network, 256MB/0.5 vCPU, non-root
+SANDBOX_BACKEND=local  # restricted subprocess: isolated interpreter, stripped env, timeout
+```
+
+The local backend lets the full pipeline run on machines without Docker; the AST
+guard is the primary defense in both modes.
+
+## Benchmark
+
+Reproducible metrics over a seeded bug corpus, malicious payloads, and benign
+patches. Runs offline (local backend, no API key):
+
+```powershell
+python benchmark/run.py          # security + pipeline oracle
+python benchmark/run.py --llm    # also measure live model fix-rate (needs AI_API_KEY)
+```
+
+Results are written to `benchmark/RESULTS.md` and `benchmark/results.json`. Latest
+offline run: AST guard blocked **17/17** malicious payloads (100%) with **0%**
+false positives, and **10/10** seeded bugs across 9 error categories validated
+end-to-end at a median **~0.6s** per patch.
+
 ## Test
 
 ```powershell
-pytest tests/test_guards.py
+pytest
 ```
 
 ## Deploy

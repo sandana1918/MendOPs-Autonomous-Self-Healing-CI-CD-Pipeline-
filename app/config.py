@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     SANDBOX_MEMORY_LIMIT: str = "256m"
     SANDBOX_NANO_CPUS: int = 500_000_000
     SANDBOX_TIMEOUT_SECONDS: int = Field(default=30, ge=1, le=300)
+    # docker = hardened container, local = restricted subprocess fallback,
+    # auto = use Docker when reachable, otherwise fall back to local.
+    SANDBOX_BACKEND: str = "auto"
     KEYCLOAK_ENABLED: bool = False
     KEYCLOAK_ISSUER_URL: str = ""
     KEYCLOAK_AUDIENCE: str = "patchforge-api"

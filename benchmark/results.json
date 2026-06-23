@@ -1,0 +1,192 @@
+{
+  "backend": "local",
+  "security": {
+    "malicious_total": 17,
+    "malicious_blocked": 17,
+    "block_rate": 1.0,
+    "benign_total": 10,
+    "benign_allowed": 10,
+    "false_positives": [],
+    "false_positive_rate": 0.0
+  },
+  "pipeline": {
+    "cases": 10,
+    "oracle_valid": 10,
+    "oracle_rate": 1.0,
+    "categories": [
+      "AttributeError",
+      "IndexError",
+      "KeyError",
+      "LogicError",
+      "MutableDefault",
+      "OffByOne",
+      "RecursionError",
+      "ValueError",
+      "ZeroDivisionError"
+    ],
+    "median_latency_ms": 620.0,
+    "p95_latency_ms": 897.0,
+    "rows": [
+      {
+        "id": "empty_average",
+        "category": "ZeroDivisionError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 558.7
+      },
+      {
+        "id": "first_element",
+        "category": "IndexError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 605.8
+      },
+      {
+        "id": "dict_lookup",
+        "category": "KeyError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 654.4
+      },
+      {
+        "id": "safe_int",
+        "category": "ValueError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 698.8
+      },
+      {
+        "id": "none_handling",
+        "category": "AttributeError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 1059.1
+      },
+      {
+        "id": "factorial_negative",
+        "category": "RecursionError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 634.2
+      },
+      {
+        "id": "inclusive_sum",
+        "category": "OffByOne",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 544.7
+      },
+      {
+        "id": "empty_max",
+        "category": "ValueError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 639.1
+      },
+      {
+        "id": "percentage_rounding",
+        "category": "LogicError",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 575.2
+      },
+      {
+        "id": "mutable_default",
+        "category": "MutableDefault",
+        "buggy_fails": true,
+        "guard_ok": true,
+        "fixed_passes": true,
+        "oracle_valid": true,
+        "latency_ms": 598.0
+      }
+    ]
+  },
+  "llm": {
+    "model": "llama-3.3-70b-versatile",
+    "cases": 10,
+    "solved": 9,
+    "solve_rate": 0.9,
+    "mean_attempts": 1.22,
+    "median_latency_ms": 1867.0,
+    "rows": [
+      {
+        "id": "empty_average",
+        "solved": true,
+        "attempts": 2,
+        "latency_ms": 2423.1
+      },
+      {
+        "id": "first_element",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1302.1
+      },
+      {
+        "id": "dict_lookup",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1851.9
+      },
+      {
+        "id": "safe_int",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 3050.7
+      },
+      {
+        "id": "none_handling",
+        "solved": false,
+        "attempts": 3,
+        "latency_ms": 4149.0
+      },
+      {
+        "id": "factorial_negative",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1869.2
+      },
+      {
+        "id": "inclusive_sum",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1864.7
+      },
+      {
+        "id": "empty_max",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1734.9
+      },
+      {
+        "id": "percentage_rounding",
+        "solved": true,
+        "attempts": 2,
+        "latency_ms": 3506.7
+      },
+      {
+        "id": "mutable_default",
+        "solved": true,
+        "attempts": 1,
+        "latency_ms": 1823.8
+      }
+    ]
+  }
+}
